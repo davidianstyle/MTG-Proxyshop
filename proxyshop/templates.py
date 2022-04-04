@@ -471,7 +471,7 @@ class NormalExtendedTemplate (NormalTemplate):
      * An extended-art version of the normal template. The layer structure of this template and NormalTemplate are identical.
     """
     def template_file_name (self):
-        return "normal-extended"
+        return "normal-extended-davidianstyle"
 
     def template_suffix (self):
         return "Extended"
@@ -623,7 +623,7 @@ class ExpeditionTemplate (NormalTemplate):
      * cards like WomensDayTemplate, and has a single static background layer.
     """
     def template_file_name (self):
-        return "znrexp"
+        return "znrexp-davidianstyle"
 
     def template_suffix (self):
         return "Expedition"
