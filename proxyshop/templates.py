@@ -483,7 +483,7 @@ class NormalExtendedTemplate (NormalTemplate):
      An extended-art version of the normal template. The layer structure of this template and
      NormalTemplate are identical.
     """
-    def template_file_name(self): return "normal-extended"
+    def template_file_name(self): return "normal-extended-davidianstyle"
     def template_suffix(self): return "Extended"
 
     def __init__(self, layout, file):
@@ -607,7 +607,7 @@ class ExpeditionTemplate (NormalTemplate):
      Zendikar Rising Expedition template. Doesn't have a mana cost layer, support creature cards, masks pinlines for
      legendary cards like WomensDayTemplate, and has a single static background layer.
     """
-    def template_file_name(self): return "znrexp"
+    def template_file_name(self): return "znrexp-davidianstyle"
     def template_suffix(self): return "Expedition"
 
     def __init__(self, layout, file):
