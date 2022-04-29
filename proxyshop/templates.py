@@ -176,9 +176,9 @@ class BaseTemplate:
         # Format file name
         suffix = self.template_suffix()
         if cfg.save_artist_name:
-            if suffix: suffix = f"{suffix} {self.layout.artist}"
-            else: suffix = self.layout.artist
-        if suffix: file_name = f"{self.layout.name} ({suffix})"
+            if suffix: suffix = f"({self.layout.artist}) [{suffix}]"
+            else: suffix = f"({self.layout.artist})"
+        if suffix: file_name = f"{self.layout.name} {suffix}"
         else: file_name = self.layout.name
 
         # Manual edit step?
