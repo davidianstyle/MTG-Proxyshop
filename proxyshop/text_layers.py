@@ -2,10 +2,11 @@
 TEXT LAYER MODULE
 """
 import proxyshop.helpers as psd
-import proxyshop.constants as con
+from proxyshop.constants import con
+from proxyshop.settings import cfg
 from proxyshop import format_text
 from proxyshop.helpers import ps, app
-cfg = con.cfg
+
 
 def scale_text_right_overlap(layer, reference_layer):
     """
@@ -17,30 +18,34 @@ def scale_text_right_overlap(layer, reference_layer):
         contents = str(reference_layer.textItem.contents)
         if contents in ("", " "):
             reference_layer.textItem.contents = "."
-    except: pass
+    except Exception:
+        return None
 
     # Can't find UnitValue object in python api
     step_size = 0.25
     reference_left_bound = reference_layer.bounds[0]
     layer_left_bound = layer.bounds[0]
     layer_right_bound = layer.bounds[2]
+    old_size = layer.textItem.size
 
     # Obtain proper spacing for this document size
     spacing = int((app.activeDocument.width/3264)*60)
 
     # Guard against the reference's left bound being left of the layer's left bound or other irregularities
-    if reference_left_bound < layer_left_bound: return None
+    if reference_left_bound >= layer_left_bound:
+        # Step down the font till it clears the reference
+        while layer_right_bound > (reference_left_bound-spacing):  # minimum 24 px gap
+            layer.textItem.size = layer.textItem.size - step_size
+            layer_right_bound = layer.bounds[2]
 
-    # Step down the font till it clears the reference
-    while layer_right_bound > (reference_left_bound-spacing):  # minimum 24 px gap
-        layer.textItem.size = layer.textItem.size - step_size
-        layer_right_bound = layer.bounds[2]
+    # Shift baseline up to keep text centered vertically
+    if old_size > layer.textItem.size:
+        layer.textItem.baselineShift = (old_size * 0.3) - (layer.textItem.size * 0.3)
 
     # Fix corrected reference layer
-    try:
-        if str(reference_layer.textItem.contents) == ".":
-            reference_layer.textItem.contents = contents
-    except: pass
+    if str(reference_layer.textItem.contents) == ".":
+        reference_layer.textItem.contents = contents
+
 
 # TODO: Multiple layers, each with a reference, that scale together until they all fit their references?
 def scale_text_to_fit_reference(layer, reference_layer):
@@ -72,27 +77,17 @@ def scale_text_to_fit_reference(layer, reference_layer):
 
     return scaled
 
+
 def vertically_align_text(layer, reference_layer):
     """
-     * Rasterises a given text layer and centres it vertically with respect to the bounding box of a reference layer.
+     * Centers a given text layer vertically with respect to the bounding box of a reference layer.
     """
-    layer.rasterize(ps.RasterizeType.TextContents)
-    psd.select_layer_pixels(reference_layer)
-    app.activeDocument.activeLayer = layer
-    psd.align_vertical()
-    psd.clear_selection()
-    """
-    METHOD FOR KEEPING UNRASTERIZED - Needs work to accomodate vertically_nudge_creature_text
-    duplicate = layer.duplicate(app.activeDocument, ps.ElementPlacement.PlaceInside)
-    app.activeDocument.activeLayer = duplicate
-    duplicate.rasterize(ps.RasterizeType.TextContents)
-    y = duplicate.bounds[1]
-    psd.select_layer_pixels(reference_layer)
-    psd.align_vertical()
-    psd.clear_selection()
-    y = duplicate.bounds[1]-y
-    layer.translate(0,y)
-    """
+    ref_height = psd.compute_layer_dimensions(reference_layer)['height']
+    lay_height = psd.compute_text_layer_dimensions(layer)['height']
+    bound_delta = reference_layer.bounds[1]-layer.bounds[1]
+    height_delta = ref_height - lay_height
+    layer.translate(0, bound_delta + height_delta / 2)
+
 
 def vertically_nudge_creature_text(layer, reference_layer, top_reference_layer):
     """
@@ -100,57 +95,39 @@ def vertically_nudge_creature_text(layer, reference_layer, top_reference_layer):
     """
     # Does the layer needs to be nudged?
     if layer.bounds[2] >= reference_layer.bounds[0]:
+        layer_copy = layer.duplicate(app.activeDocument, ps.ElementPlacement.PlaceInside)
+        layer_copy.rasterize(ps.RasterizeType.TextContents)
+        app.activeDocument.activeLayer = layer_copy
         psd.select_layer_pixels(reference_layer)
-        app.activeDocument.activeLayer = layer
-
-        # copy the contents of the active layer within the current selection to a new layer
-        app.executeAction(
-            app.charIDToTypeID("CpTL"),
-            None,
-            ps.DialogModes.DisplayNoDialogs)
-        desc5 = ps.ActionDescriptor()
-        desc6 = ps.ActionDescriptor()
-        ref4 = ps.ActionReference()
-        idLyr = app.charIDToTypeID("Lyr ")
-        ref4.putEnumerated(
-            idLyr,
-            app.charIDToTypeID("Ordn"),
-            app.charIDToTypeID("Trgt"))
-        desc5.putReference(app.charIDToTypeID("null"), ref4)
-        desc6.putString(app.charIDToTypeID("Nm  "), "Extra Bit")
-        desc5.putObject(app.charIDToTypeID("T   "), idLyr, desc6)
-        app.executeAction(
-            app.charIDToTypeID("setd"),
-            desc5,
-            ps.DialogModes.DisplayNoDialogs)
-
+        app.activeDocument.selection.invert()
+        app.activeDocument.selection.clear()
+        
         # determine how much the rules text overlaps the power/toughness by
-        extra_bit_layer = psd.getLayer("Extra Bit", layer.parent)
-        delta = top_reference_layer.bounds[3] - extra_bit_layer.bounds[3]
-        extra_bit_layer.visible = False
-
-        if delta < 0: layer.applyOffset(0, delta, ps.OffsetUndefinedAreas.OffsetSetToLayerFill)
+        delta = top_reference_layer.bounds[3] - layer_copy.bounds[3]
+        if delta < 0: layer.translate(0, delta)
 
         psd.clear_selection()
+        layer_copy.remove()
 
 # Class definitions
-class TextField ():
+class TextField:
     """
     A generic TextField, which allows you to set a text layer's contents and text color.
     """
-    def __init__ (self, layer, text_contents, text_color):
+    def __init__(self, layer, text_contents, text_color):
         self.layer = layer
         self.text_contents = ""
         if text_contents: self.text_contents = text_contents.replace("\n", "\r")
         self.text_color = text_color
 
-    def execute (self):
+    def execute(self):
         """
         Enables and fills the text field
         """
         self.layer.visible = True
         self.layer.textItem.contents = self.text_contents
         self.layer.textItem.color = self.text_color
+
 
 class ScaledTextField (TextField):
     """
@@ -164,8 +141,10 @@ class ScaledTextField (TextField):
     def execute (self):
         super().execute()
 
-        # scale down the text layer until it doesn't overlap with the reference layer (e.g. card name overlapping with mana cost)
+        # Scale down the text layer until it doesn't overlap with the reference layer
+        # (e.g. card name overlapping with mana cost)
         scale_text_right_overlap(self.layer, self.reference_layer)
+
 
 class ExpansionSymbolField (TextField):
     """
@@ -219,13 +198,14 @@ class BasicFormattedTextField (TextField):
      * show the mana cost 2R with text contents "o2or" with characters being appropriately colored.
      * Doesn't support flavor text or centered text. For use with fields like mana costs and planeswalker abilities.
     """
-    def execute (self):
+    def execute(self):
         super().execute()
 
         # Format text
         app.activeDocument.activeLayer = self.layer
         italic_text = format_text.generate_italics(self.text_contents)
         format_text.format_text(self.text_contents, italic_text, -1, False)
+
 
 class FormattedTextField (TextField):
     """
@@ -267,18 +247,19 @@ class FormattedTextField (TextField):
         format_text.format_text(self.text_contents + "\r" + self.flavor_text, italic_text, flavor_index, self.is_centered)
         if self.is_centered: self.layer.textItem.justification = ps.Justification.Center
 
+
 class FormattedTextArea (FormattedTextField):
     """
      * A FormattedTextField where the text is required to fit within a given area. An instance of self class will step down the font size
      * until the text fits within the reference layer's bounds (in 0.25 pt increments), then rasterise the text layer, and centre it vertically
      * with respect to the reference layer's pixels.
     """
-    def __init__ (self, layer, text_contents, text_color, flavor_text, reference_layer, is_centered=False, fix_length=True):
+    def __init__(self, layer, text_contents, text_color, flavor_text, reference_layer, is_centered=False, fix_length=True):
 
         # Prepare for text being too long
-        if len(text_contents) > 300 and fix_length:
-            layer.textItem.size = (layer.textItem.size-0.5)
-            layer.textItem.leading = (layer.textItem.leading-0.5)
+        if fix_length and len(text_contents) > 300:
+            layer.textItem.size = (layer.textItem.size-0.75)
+            layer.textItem.leading = (layer.textItem.leading-0.75)
 
         super().__init__(layer, text_contents, text_color, flavor_text, is_centered)
         self.reference_layer = reference_layer
@@ -287,18 +268,19 @@ class FormattedTextArea (FormattedTextField):
         super().execute()
         if self.text_contents or self.flavor_text:
             if self.text_contents != "" or self.flavor_text != "":
-                # resize the text until it fits into the reference layer
+                # Resize the text until it fits into the reference layer
                 scale_text_to_fit_reference(self.layer, self.reference_layer)
 
-                # rasterise and centre vertically
+                # Rasterize and centre vertically
                 vertically_align_text(self.layer, self.reference_layer)
 
                 if self.is_centered:
-                    # ensure the layer is centered horizontally as well
+                    # Ensure the layer is centered horizontally as well
                     psd.select_layer_pixels(self.reference_layer)
                     app.activeDocument.activeLayer = self.layer
                     psd.align_horizontal()
                     psd.clear_selection()
+
 
 class CreatureFormattedTextArea (FormattedTextArea):
     """
@@ -306,8 +288,18 @@ class CreatureFormattedTextArea (FormattedTextArea):
      * overlaps with another specified reference layer (which should represent the bounds of the power/toughness box), the layer will be shifted
      * vertically by just enough to ensure that it doesn't overlap.
     """
-    def __init__ (self, layer, text_contents, text_color, flavor_text, reference_layer, pt_reference_layer, pt_top_reference_layer, is_centered=False):
-        super().__init__(layer, text_contents, text_color, flavor_text, reference_layer, is_centered)
+    def __init__(
+            self,
+            layer,
+            text_contents,
+            text_color,
+            flavor_text,
+            reference_layer,
+            pt_reference_layer,
+            pt_top_reference_layer,
+            is_centered=False, fix_length=True
+    ):
+        super().__init__(layer, text_contents, text_color, flavor_text, reference_layer, is_centered, fix_length)
         self.pt_reference_layer = pt_reference_layer
         self.pt_top_reference_layer = pt_top_reference_layer
 
