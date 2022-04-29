@@ -94,7 +94,7 @@ class BaseTemplate:
             artist_layer = psd.getLayer(con.layers['ARTIST'], self.legal_layer)
 
             # Fill set info / artist info
-            set_layer.textItem.contents = self.layout.set + set_layer.textItem.contents
+            psd.replace_text(set_layer, "MTG", self.layout.set if cfg.auto_symbol else "MTG")
             psd.replace_text(artist_layer, "Artist", self.layout.artist)
 
     def load_template(self):
