@@ -487,8 +487,8 @@ class NormalExtendedTemplate (NormalTemplate):
     def template_suffix(self): return "Extended"
 
     def __init__(self, layout, file):
-        # Strip out reminder text for extended
-        cfg.remove_reminder = True
+        # Strip out reminder text for extended (davidianstyle edit: respect config)
+        # cfg.remove_reminder = True
         super().__init__(layout, file)
 
 
@@ -510,8 +510,8 @@ class WomensDayTemplate (NormalTemplate):
     def template_suffix(self): return "Showcase"
 
     def __init__(self, layout, file):
-        # Strip out reminder text for fullart
-        cfg.remove_reminder = True
+        # Strip out reminder text for fullart (davidianstyle edit: respect config)
+        # cfg.remove_reminder = True
         super().__init__(layout, file)
 
     def enable_frame_layers(self):
@@ -611,8 +611,8 @@ class ExpeditionTemplate (NormalTemplate):
     def template_suffix(self): return "Expedition"
 
     def __init__(self, layout, file):
-        # strip out reminder text
-        if not cfg.remove_reminder:
+        # strip out reminder text (davidianstyle edit: respect config)
+        if cfg.remove_reminder:
             layout.oracle_text = format_text.strip_reminder_text(layout.oracle_text)
         super().__init__(layout, file)
 
