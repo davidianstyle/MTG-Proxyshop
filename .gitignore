@@ -155,7 +155,9 @@ cython_debug/
 
 # Specific to this project
 /art
+/art-uploaded
 /out
+/out-uploaded
 /tmp
 /dist_old
 /templates
