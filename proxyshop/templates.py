@@ -1463,7 +1463,7 @@ class BasicLandUnstableTemplate (BasicLandTemplate):
     """
     Basic land template for the borderless basics from Unstable.
     """
-    def template_file_name(self): return "basic-unstable"
+    def template_file_name(self): return "basic-unstable-davidianstyle"
     def template_suffix(self): return "Unstable"
 
     def enable_frame_layers(self):
