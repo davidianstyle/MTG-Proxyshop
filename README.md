@@ -25,8 +25,8 @@ Photoshop scripting to generate high-quality Magic card renders, original concep
 
 # Setup and Usage Guide (GUI)
 * Extract release into a folder of your choice.
-* Download the templates linked above and drop them inside the templates folder. Make sure to keep named plugin folders like "MrTeferi" intact in the templates folder.
-* Launch `Proxyshop.exe`.
+* OPTION 1: Download the templates linked above and drop them inside the templates folder. Make sure to keep named plugin folders like "MrTeferi" intact in the templates folder.
+* OPTION 2: Launch `Proxyshop.exe`. Click "Update", a window in your browser will open asking you to authenticate with Proxyshop using your google account. Once you've authenticated, Proxyshop will load templates available to download, download them as you please.
 * The first two tabs splitup the main application which renders real MTG cards, and the custom card creator which will allow you to render your own custom cards.
 * The next set of tabs are card types which currently have more than one template available. You can select which template should be used if Proxyshop encounters a card of that type, for example "Fullart" for normal cards, "SilvanExtended" for MDFC, "Extended" for Planeswalker cards.
 * At the top are settings, saved to the config.ini file and maintained the next time you open the app. Automatic Set Symbol will input the correct expansion symbol according to the card's set information. Auto Symbol Size will size and center that symbol on the end of the typeline. Manual Edit Step will end the script automation when the card is finished so you can make manual changes before saving. You can also remove reminder text or flavor text from the card.
@@ -57,7 +57,7 @@ Photoshop scripting to generate high-quality Magic card renders, original concep
 * Run the app: `py main.py`
 
 # FAQ
-* *I want to change the set symbol to something else.* Head over to https://andrewgioia.github.io/Keyrune/cheatsheet.html - you can use any of these symbols for the set symbol for your cards. Copy the text of the symbol you want on the cheatsheet, then replace the expansion symbor character in the `config.ini` under Expansion.Symbol.
+* *I want to change the set symbol to something else.* Head over to https://keyrune.andrewgioia.com/cheatsheet.html - you can use any of these symbols for the set symbol for your cards. Copy the text of the symbol you want on the cheatsheet, then replace the expansion symbor character in the `config.ini` under Expansion.Symbol.
 * *I get an error when trying to execute the script with the python command.* Python may not be added to your PATH environment variable. Here's how you can add it: [Link](https://datatofish.com/add-python-to-windows-path/)
 * *Where is a good place to get high quality MTG art?* Your best source is going to be [MTG Pics](https://mtgpics.com), to improve art quality even more you can look into upscaling with Topaz/Chainner/ESRGAN. On our discord we provide a lot of resources for learning how to upscale art easily and effectively. Also for mass downloading art, view my other project: [MTG Art Downloader](https://github.com/MrTeferi/MTG-Art-Downloader)
 
@@ -65,4 +65,16 @@ Photoshop scripting to generate high-quality Magic card renders, original concep
 * Modern style cards, normal and extended; transform and mdfc, front and back; basic lands, normal, Theros, and Unstable styles; planeswalkers, normal and extended; mutate, adventure, miracle, and snow cards; and various flavours of fancy frames - stargazing, universes beyond, masterpiece, ZNE expedition, and womensday.
 * Leveler and saga cards require manual intervention to position text layers, but are automated up until that point.
 * Planeswalkers also require manual intervention to position text layers and the ragged textbox divider, but are automated up until that point.
-* Flavor text divider is not supported, as rules text & flavour text are formatted in the same text layer, thus far it seems impractical to position the flavor text divider programmatically.
+
+# Google Drive Privacy Policy
+Proxyshop does not collect any information from users, period.
+Google Drive integration is purely for the purpose of keeping installed plugins up-to-date,
+our contributors almost always share their PSD files utilizing Google Drive, making it the easiest
+and safest way to share the files and metadata required to check for routine updates.
+
+# Credits
+* Credit to Wizards of the Coast and all the talented artists who make Magic the Gathering Possible
+* Credit to Chilli Axe for his original amazing project [MTG Photoshop Automation](https://github.com/chilli-axe/mtg-photoshop-automation), and for producing most of the base PSD templates that have been modified to work with Proxyshop. None of this would have been possible without him!
+* Credit to SilvanMTG who has also done an incredible amount of Template work. (Silvan Extended Normal and MDFC)
+* Credit to Hal and the other contributors over at [Photoshop Python API](https://github.com/loonghao/photoshop-python-api)
+* Credit to Nelynes, Trix are for Scoot, FeuerAmeise, michayggdrasil, Warpdandy, MaleMPC, Vittorio Masia and others who have provided assets to the community that made various other templates possible.

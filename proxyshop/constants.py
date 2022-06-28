@@ -2,24 +2,9 @@
 GLOBAL CONSTANTS
 Keep all global variables here.
 """
-import json
 import os
-from pathlib import Path
+import json
 cwd = os.getcwd()
-
-
-# For object permanence
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-# Ensure mandatory folders are created
-Path(os.path.join(cwd, "out")).mkdir(mode=511, parents=True, exist_ok=True)
-Path(os.path.join(cwd, "tmp")).mkdir(mode=511, parents=True, exist_ok=True)
 
 # PATHS
 json_custom_path = os.path.join(cwd, "tmp\\custom.json")
@@ -122,6 +107,7 @@ layers = {
     "RULES_TEXT_CREATURE_FLIP": "Rules Text - Creature Flip",
     "RULES_TEXT_ADVENTURE": "Rules Text - Adventure",
     "MUTATE": "Mutate",
+    "DIVIDER": "Divider",
 
     # planar text and icons
     "STATIC_ABILITY": "Static Ability",
@@ -210,6 +196,7 @@ font_collector = "Relay-Medium"
 modal_indent = 5.7
 line_break_lead = 2.4
 flavor_text_lead = 4.4
+flavor_text_lead_divider = 7
 
 # NDPMTG font dictionary to translate Scryfall symbols to font character sequences
 symbols = {
@@ -438,11 +425,36 @@ rgbi_g = rgb_primary
 align_classic_quote = False
 
 # Import symbol library
-with open(os.path.join(cwd, "proxyshop/symbols.json"), encoding="utf-8-sig") as js:
+with open(os.path.join(cwd, "proxyshop/symbols.json"), "r", encoding="utf-8-sig") as js:
     set_symbols = json.load(js)
 
+# Import version tracker
+if not os.path.exists(os.path.join(cwd, "proxyshop/version_tracker.json")):
+    with open(os.path.join(cwd, "proxyshop/version_tracker.json"), "w", encoding="utf-8") as tr:
+        json.dump({}, tr, indent=4)
+with open(os.path.join(cwd, "proxyshop/version_tracker.json"), "r", encoding="utf-8") as tr:
+    try: versions = json.load(tr)
+    except json.decoder.JSONDecodeError: versions = {}
 
-class Con:
+# HTTP Header
+http_header = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1;'
+    ' WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36'
+}
+
+
+# For object permanence
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+# Global app-wide constants class
+class Constants:
     __metaclass__ = Singleton
 
     def __init__(self):
@@ -494,10 +506,12 @@ class Con:
         self.font_subtext = font_subtext
         self.font_collector = font_collector
 
-        # Font spacing
+        # Font formatting
         self.modal_indent = modal_indent
         self.line_break_lead = line_break_lead
         self.flavor_text_lead = flavor_text_lead
+        self.flavor_text_lead_divider = flavor_text_lead_divider
+        self.flavor_text_color = None
 
         # Card rarities
         self.rarity_common = rarity_common
@@ -528,8 +542,21 @@ class Con:
         # Creator toggle features
         self.align_classic_quote = align_classic_quote
 
+        # HTTP Header for requests
+        self.http_header = http_header
+
+        # Version tracker
+        self.versions = versions
+
     def reload(self):
         self.load_values()
 
+    def update_version_tracker(self):
+        """
+        Updates the version tracker json with current dict.
+        """
+        with open(os.path.join(cwd, "proxyshop/version_tracker.json"), "w", encoding="utf-8") as vt:
+            json.dump(self.versions, vt, indent=4)
+
 # Global instance
-con = Con()
+con = Constants()

@@ -89,7 +89,7 @@ class CreatorNormalLayout(CreatorLayout):
             "type_line": self.ids.type_line.text,
             "toughness": self.ids.toughness.text,
             "rarity": self.ids.rarity.text.lower(),
-            "card_count": self.ids.card_count.text,
+            "printed_size": self.ids.card_count.text,
             "keywords": self.ids.keywords.text.split(","),
             "collector_number": self.ids.collector_number.text,
             "color_identity": self.ids.color_identity.text.split()
@@ -119,7 +119,7 @@ class CreatorPlaneswalkerLayout(CreatorLayout):
             "mana_cost": self.ids.mana_cost.text,
             "type_line": self.ids.type_line.text,
             "rarity": self.ids.rarity.text.lower(),
-            "card_count": self.ids.card_count.text,
+            "printed_size": self.ids.card_count.text,
             "oracle_text": rules_text,
             "flavor_text": "",
             "keywords": self.ids.keywords.text.split(","),
@@ -163,7 +163,7 @@ class CreatorSagaLayout(CreatorLayout):
             "mana_cost": self.ids.mana_cost.text,
             "type_line": self.ids.type_line.text,
             "rarity": self.ids.rarity.text.lower(),
-            "card_count": self.ids.card_count.text,
+            "printed_size": self.ids.card_count.text,
             "keywords": self.ids.keywords.text.split(","),
             "collector_number": self.ids.collector_number.text,
             "color_identity": self.ids.color_identity.text.split()
@@ -204,7 +204,7 @@ class InputItem(TextInput):
                 self.focus = False
                 nxt.focus = True
             return True
-        if keycode[0] == 286:
+        if keycode[0] == 286:  # F5 to reset text
             self.clicked = False
             self.text = self.original
         super().keyboard_on_key_down(window, keycode, text, modifiers)
@@ -218,6 +218,7 @@ class NoEnterInputItem(InputItem):
         if keycode[0] == 13:  # deal with cycle
             return False
         super().keyboard_on_key_down(window, keycode, text, modifiers)
+
 
 class FourNumInput(InputItem):
     # Properties
@@ -233,17 +234,18 @@ class FourNumInput(InputItem):
                 return super().insert_text(substring, from_undo=from_undo)
 
 
-class TwoNumInput(InputItem):
+class ThreeNumInput(InputItem):
     # Properties
-    max_len = 2
+    max_len = 3
     input_type = "number"
+    whitelist = ("*", "X", "Y", "+", "-")
 
     def insert_text(self, substring, from_undo=False):
         """
-        2 character max, numeric
+        3 character max, numeric with a small whitelist
         """
         if len(self.text) < self.max_len:
-            if substring.isnumeric():
+            if substring.isnumeric() or substring in self.whitelist:
                 return super().insert_text(substring, from_undo=from_undo)
 
 
