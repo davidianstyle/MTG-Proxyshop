@@ -7,7 +7,11 @@ import ctypes
 import os
 import random
 import sys
+import threading
 import time
+from traceback import print_tb
+from typing import Union
+import asynckivy as ak
 from datetime import datetime as dt
 from kivy.app import App
 from kivy.core.text import LabelBase
@@ -17,85 +21,51 @@ from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from kivy.uix.progressbar import ProgressBar
 from kivy.utils import get_color_from_hex
+from proxyshop.core import (
+    check_for_updates,
+    update_template,
+    authenticate_user,
+    check_for_authentication,
+    get_templates
+)
+from proxyshop.settings import cfg
 cwd = os.getcwd()
 
 
-class HoverBehavior(object):
-    """
-    Hover behavior.
-    :Events:
-        `on_enter`
-            Fired when mouse enter the bbox of the widget.
-        `on_leave`
-            Fired when the mouse exit the widget
-    """
-
-    hovered = BooleanProperty(False)
-    border_point= ObjectProperty(None)
-    '''Contains the last relevant point received by the Hoverable. This can
-    be used in `on_enter` or `on_leave` in order to know where was dispatched the event.
-    '''
-
-    def __init__(self, **kwargs):
-        self.register_event_type('on_enter')
-        self.register_event_type('on_leave')
-        Window.bind(mouse_pos=self.on_mouse_pos)
-        super(HoverBehavior, self).__init__(**kwargs)
-
-    def on_mouse_pos(self, *args):
-        if not self.get_root_window():
-            return # do proceed if I'm not displayed <=> If have no parent
-        pos = args[1]
-        # Next line to_widget allowed to compensate for relative layout
-        inside = self.collide_point(*self.to_widget(*pos))
-        if self.hovered == inside:
-            # We have already done what was needed
-            return
-        self.border_point = pos
-        self.hovered = inside
-        if inside:
-            self.dispatch('on_enter')
-        else:
-            self.dispatch('on_leave')
-
-
-def get_font(name, default="Roboto"):
-    """
-    Instantiate font if exists, otherwise return False
-    """
-    basename = name[0:-4]
-    try:
-        LabelBase.register(name=basename, fn_regular=name)
-        return basename
-    except OSError:
-        try:
-            LabelBase.register(name=basename, fn_regular=f"fonts/{name}")
-            return basename
-        except OSError:
-            try:
-                LabelBase.register(
-                    name=basename,
-                    fn_regular=f"C:\\Users\\{os.getlogin()}\\AppData\\Local\\Microsoft\\Windows\\Fonts\\{name}"
-                )
-                return basename
-            except OSError: return default
+"""
+CONSOLE MODULES
+"""
 
 
 class Console (BoxLayout):
     """
     Main console class
     """
-    def __init__(self, **kwargs):
-        Builder.load_file(os.path.join(cwd, "proxyshop/console.kv"))
-        super().__init__(**kwargs)
+    Builder.load_file(os.path.join(cwd, "proxyshop/kivy/console.kv"))
+    lines = 1
 
-    def update(self, msg, e=None):
+    def __init__(self, **kwargs):
+        super(Console, self).__init__(**kwargs)
+        if not cfg.dev_mode: self.size_hint = (1, .58)
+
+    def update(self, msg="", e=None, end="\n"):
         """
         Add text to console
         """
         output = self.ids.console_output
-        output.text += msg+"\n"
+
+        # Enforce maximum number of lines
+        if self.lines == 300:
+            text = output.text.split("\n", 1)[1]
+        else:
+            text = output.text
+            self.lines += 1
+
+        # Add message to the output label
+        output.text = f"{text}{msg}{end}"
         self.ids.viewport.scroll_y = 0
         if e: self.log_exception(e)
 
@@ -111,31 +81,38 @@ class Console (BoxLayout):
             log.write(log_text)
         return self.error(msg, e)
 
-    def error(self, msg, e=None):
+    def error(self, msg, e=None, color=True, continue_msg="Continue to next card?"):
         """
         Display error, wait for user to cancel or continue.
         """
         # End waiting to cancel
         self.end_await()
 
-        # Notify user
-        msg = f"[color=#a84747]{msg}[/color]\nContinue to next card?"
-        self.update(msg)
-
         # Log exception if given
         if e: self.log_exception(e)
+
+        # Are we in dev mode?
+        if cfg.dev_mode:
+            return False
+
+        # Color message?
+        if color: msg = f"[color=#a84747]{msg}[/color]"
+        if cfg.skip_failed:
+            continue_msg = "Skipping this card!!"
+
+        # Notify user
+        self.update(f"[color=#a84747]{msg}[/color]\n{continue_msg}")
 
         # Enable buttons
         self.ids.continue_btn.disabled = False
         self.ids.cancel_btn.disabled = False
 
         # Prompt user response
-        result = self.ids.console_controls.wait()
+        if cfg.skip_failed: result = True
+        else: result = self.ids.console_controls.wait()
 
         # Cancel or don't
-        if not result:
-            self.update("Understood! Canceling render operation.")
-        else: self.update("Alrighty, starting next card!")
+        if not result: self.update("Understood! Canceling render operation.")
 
         # Disable buttons
         self.ids.continue_btn.disabled = True
@@ -178,20 +155,37 @@ class Console (BoxLayout):
         self.ids.cancel_btn.disabled = True
 
     @staticmethod
-    def log_exception(e):
+    def log_exception(e: Union[Exception, str], log_file: str = "tmp/error.txt"):
         """
         Log python exception.
         """
-        cur_time = dt.now().strftime("%m/%d/%Y %H:%M")
-        e = f"[{cur_time}]\n{e}\n"
-        with open(os.path.join(cwd, "tmp/error.txt"), "a", encoding="utf-8") as log:
+        # Is this an Exception object?
+        if hasattr(e, '__traceback__'):
+
+            # Evaluate error for developer output
+            tb = sys.exc_info()[2]
+            print_tb(tb)
+
+            # Create readable info locating the error
+            while True:
+                line = tb.tb_lineno
+                location = tb.tb_frame.f_code.co_filename
+                if tb.tb_next: tb = tb.tb_next
+                else: break
+
+            # Formatting for end user troubleshoot log
+            cur_time = dt.now().strftime("%m/%d/%Y %H:%M")
+            e = f"[{cur_time}] Line: {line}\n{location}: {e}\n"
+
+        # Log the file
+        with open(os.path.join(cwd, log_file), "a", encoding="utf-8") as log:
             log.write(e)
 
     @staticmethod
-    def kill_thread(thr):
+    def kill_thread(thr: threading.Thread):
         """
         Kill current render thread.
-        thread: threading.Thread object
+        @param thr: Thread object to kill
         """
         thread_id = thr.ident
         res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, ctypes.py_object(SystemExit))
@@ -204,18 +198,18 @@ class ConsoleOutput (Label):
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if cfg.dev_mode: self.text = "Test mode enabled!\n"
+        else: self.text = "All systems go! Let's make a proxy.\n"
 
 
 class ConsoleControls (BoxLayout):
     """
     Console control buttons
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.running = True
-        self.waiting = False
-        self.success = True
-        self.choice = False
+    running = True
+    waiting = False
+    success = True
+    choice = False
 
     def wait(self):
         """
@@ -246,12 +240,197 @@ class ConsoleControls (BoxLayout):
             time.sleep(1)
         return None
 
+    @staticmethod
+    async def check_for_updates():
+        """
+        Open updater Popup.
+        """
+        while True:
+            if check_for_authentication():
+                # We are Authenticated
+                Updater = UpdatePopup()
+                Updater.open()
+                await ak.run_in_thread(Updater.check_for_updates, daemon=True)
+                ak.start(Updater.populate_updates())
+                break
+            else:
+                # We need to authenticate
+                auth = Authenticator()
+                auth.open()
+                success = await ak.run_in_thread(auth.authenticate, daemon=True)
+                await ak.sleep(2)
+                auth.dismiss()
+                if success: continue
+                else: break
+
+
+"""
+SETTINGS PANEL
+"""
+
+
+# TODO: Move settings into a popup panel
+
+
+"""
+Updater
+"""
+
+
+class UpdatePopup(Popup):
+    """
+    Popup modal for updating templates.
+    """
+    loading = True
+    updates = {}
+    categories = {}
+    entries = {}
+
+    def check_for_updates(self):
+        """
+        Runs the check_for_updates core function, then lists needed updates.
+        """
+        self.updates = check_for_updates()
+
+    async def populate_updates(self):
+        """
+        Load the list of updates available.
+        """
+        # Binary tracker for alternating color
+        chk = 0
+
+        # Remove loading screen
+        if self.loading:
+            self.ids.container.remove_widget(self.ids.loading)
+            self.ids.container.padding = [0, 0, 0, 0]
+            self.loading = False
+
+        # Loop through categories
+        for cat, temps in self.updates.items():
+
+            # Loop through updates within this category
+            for i, temp in enumerate(temps):
+                # Alternate table item color
+                if chk == 0: chk, bg_color = 1, "#101010"
+                else: chk, bg_color = 0, "#181818"
+                self.entries[temp['id']] = UpdateEntry(self, temp, bg_color)
+                self.ids.container.add_widget(self.entries[temp['id']])
+
+        # Remove loading text
+        if len(self.updates) == 0:
+            self.ids.loading_text.text = " [i]No updates found![/i]"
+        else: self.ids.loading_text.text = " [i]Updates Available[/i]"
+
+
+class UpdateEntry(BoxLayout):
+    def __init__(self, parent: Popup, temp: dict, bg_color: str, **kwargs):
+        if temp['plugin']: plugin = f" [size=18]({temp['plugin']})[/size]"
+        else: plugin = ""
+        self.bg_color = bg_color
+        self.name = f"{temp['type']} - {temp['name']}{plugin}"
+        self.status = f"[color=#59d461]{temp['version_new']}[/color]"
+        self.data = temp
+        self.root = parent
+        super().__init__(**kwargs)
+
+    async def download_update(self, download: BoxLayout) -> None:
+        self.progress = ProgressBar()
+        download.clear_widgets()
+        download.add_widget(self.progress)
+        await ak.run_in_thread(lambda: update_template(self.data, self.update_progress), daemon=True)
+        await ak.sleep(.5)
+        self.root.ids.container.remove_widget(self.root.entries[self.data['id']])
+
+    def update_progress(self, tran: str, total: str) -> None:
+        if self.progress.value != 100:
+            self.progress.value += 5
+
+
+"""
+Authenticator
+"""
+
+
+class Authenticator(Popup):
+
+    def authenticate(self):
+        if authenticate_user():
+            self.ids.response.text = "[b]Authentication: SUCCESS![/b]"
+            return True
+        else:
+            self.ids.response.text = "[b]Authentication: FAILED![/b]"
+            return False
+
+
+"""
+UTILITY FUNCTIONS
+"""
+
+
+def get_font(name: str, default: str = "Roboto"):
+    """
+    Instantiate font if exists, otherwise return False
+    """
+    basename = name[0:-4]
+    try:
+        LabelBase.register(name=basename, fn_regular=name)
+        return basename
+    except OSError:
+        try:
+            LabelBase.register(name=basename, fn_regular=f"fonts/{name}")
+            return basename
+        except OSError:
+            try:
+                LabelBase.register(
+                    name=basename,
+                    fn_regular=f"C:\\Users\\{os.getlogin()}\\AppData\\Local\\Microsoft\\Windows\\Fonts\\{name}"
+                )
+                return basename
+            except OSError: return default
+
+
+"""
+UTILITY CLASSES
+"""
+
+
+class HoverBehavior(object):
+    """
+    Hover behavior.
+    :Events:
+        `on_enter`
+            Fired when mouse enter the bbox of the widget.
+        `on_leave`
+            Fired when the mouse exit the widget
+    """
+    hovered = BooleanProperty(False)
+    border_point = ObjectProperty(None)
+
+    def __init__(self, **kwargs):
+        self.register_event_type('on_enter')
+        self.register_event_type('on_leave')
+        Window.bind(mouse_pos=self.on_mouse_pos)
+        super(HoverBehavior, self).__init__(**kwargs)
+
+    def on_mouse_pos(self, *args):
+        if not self.get_root_window():
+            return  # do proceed if I'm not displayed <=> If I have no parent
+        pos = args[1]
+        # Next line to_widget allowed to compensate for relative layout
+        inside = self.collide_point(*self.to_widget(*pos))
+        if self.hovered == inside:
+            # We have already done what was needed
+            return
+        self.border_point = pos
+        self.hovered = inside
+        if inside: self.dispatch('on_enter')
+        else: self.dispatch('on_leave')
+
 
 class HoverButton(Button, HoverBehavior):
     """
     Animated button to run new render operation
     """
-    font_name = get_font("Beleren Small Caps.ttf")
     options = [
             "Do it!", "Let's GO!", "Ready?",
             "PROXY", "Hurry up!", "GAME ON",
@@ -261,7 +440,12 @@ class HoverButton(Button, HoverBehavior):
     org_text = None
     org_color = None
 
-    def on_enter(self, *args):
+    def __init__(self, **kwargs):
+        # Set the default font
+        self.font_name = get_font("Beleren Small Caps.ttf")
+        super().__init__(**kwargs)
+
+    def on_enter(self):
         """
         When hovering
         """
@@ -272,7 +456,7 @@ class HoverButton(Button, HoverBehavior):
             self.text = random.choice(self.options)
             self.background_color = get_color_from_hex(self.hover_color)
 
-    def on_leave(self, *args):
+    def on_leave(self):
         """
         When leave
         """
@@ -280,6 +464,63 @@ class HoverButton(Button, HoverBehavior):
             Window.set_system_cursor('arrow')
             self.text = self.org_text
             self.background_color = self.org_color
+
+
+"""
+DEV MODE
+"""
+
+
+class TestApp(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.selector = None
+
+    def select_template(self):
+        self.selector = TemplateSelector(self)
+        self.selector.open()
+
+    def test_target(self, temp):
+        self.selector.dismiss()
+        threading.Thread(
+            target=App.get_running_app().test_target,
+            args=(temp[0], temp[1]), daemon=True
+        ).start()
+
+
+class TemplateSelector(Popup):
+    def __init__(self, test_app, **kwargs):
+        self.test_app = test_app
+        self.size_hint = (.8, .8)
+        super().__init__(**kwargs)
+
+        # Add template buttons
+        for k, v in get_templates().items():
+            self.ids.content.add_widget(Label(
+                text=k.replace("_", " ").title(),
+                size_hint=(1, None),
+                font_size=25,
+                height=45
+            ))
+            for key, val in v.items():
+                self.ids.content.add_widget(SelectorButton(
+                    self.test_app,
+                    [k, val],
+                    text=key
+                ))
+
+
+class SelectorButton(HoverButton):
+    def __init__(self, root, temp, **kwargs):
+        super().__init__(**kwargs)
+        self.test_app = root
+        self.temp = temp
+        self.size_hint = (1, None)
+        self.font_size = 20
+        self.height = 35
+
+    def on_release(self, **kwargs):
+        self.test_app.test_target(self.temp)
 
 
 console_handler = Console()
