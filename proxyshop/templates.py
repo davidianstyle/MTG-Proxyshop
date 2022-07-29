@@ -246,7 +246,7 @@ class BaseTemplate:
         self.post_text_layers()
 
         # Format file name
-        suffix = self.template_suffix()
+        suffix = self.template_suffix
         if cfg.save_artist_name:
             if suffix: suffix = f"({self.layout.artist}) [{suffix}]"
             else: suffix = f"({self.layout.artist})"
