@@ -579,7 +579,7 @@ class WomensDayTemplate (NormalTemplate):
     and NormalTemplate are similar, but this template doesn't have any background layers, and a layer mask
     on the pinlines group needs to be enabled when the card is legendary.
     """
-    template_file_name = "womensday.psd"
+    template_file_name = "womensday-davidianstyle.psd"
     template_suffix = "Showcase"
 
     def __init__(self, layout):
