@@ -13,10 +13,9 @@ a = Analysis(['..\\Proxyshop\main.py'],
                 'kivy',
                 'svglib.svglib',
                 'reportlab.graphics',
-                'requests',
-                'googleapiclient.discovery'
+                'requests'
              ],
-             hookspath=["proxyshop/hooks"],
+             hookspath=[],
              hooksconfig={},
              runtime_hooks=[],
              excludes=[],
@@ -29,8 +28,7 @@ pyz = PYZ(a.pure, a.zipped_data,
 
 a.datas += [
     ('fonts/Beleren Small Caps.ttf', 'fonts/Beleren Small Caps.ttf', 'DATA'),
-    ('proxyshop/gdrive.yaml', 'proxyshop/gdrive.yaml', 'DATA'),
-    ('proxyshop.png', 'proxyshop.png', 'DATA')
+    ('proxyshop/img/proxyshop.png', 'proxyshop/img/proxyshop.png', 'DATA')
 ]
 
 exe = EXE(pyz,
@@ -49,4 +47,4 @@ exe = EXE(pyz,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
-          icon='favicon.ico')
+          icon='proxyshop/img/favicon.ico')

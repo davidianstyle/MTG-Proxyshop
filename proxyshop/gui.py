@@ -27,8 +27,6 @@ from kivy.utils import get_color_from_hex
 from proxyshop.core import (
     check_for_updates,
     update_template,
-    authenticate_user,
-    check_for_authentication,
     get_templates
 )
 from proxyshop.settings import cfg
@@ -245,23 +243,11 @@ class ConsoleControls (BoxLayout):
         """
         Open updater Popup.
         """
-        while True:
-            if check_for_authentication():
-                # We are Authenticated
-                Updater = UpdatePopup()
-                Updater.open()
-                await ak.run_in_thread(Updater.check_for_updates, daemon=True)
-                ak.start(Updater.populate_updates())
-                break
-            else:
-                # We need to authenticate
-                auth = Authenticator()
-                auth.open()
-                success = await ak.run_in_thread(auth.authenticate, daemon=True)
-                await ak.sleep(2)
-                auth.dismiss()
-                if success: continue
-                else: break
+        # We are Authenticated
+        Updater = UpdatePopup()
+        Updater.open()
+        await ak.run_in_thread(Updater.check_for_updates, daemon=True)
+        ak.start(Updater.populate_updates())
 
 
 """
@@ -334,32 +320,36 @@ class UpdateEntry(BoxLayout):
         super().__init__(**kwargs)
 
     async def download_update(self, download: BoxLayout) -> None:
-        self.progress = ProgressBar()
+        self.progress = UpdateProgress(self.data['size'])
         download.clear_widgets()
         download.add_widget(self.progress)
-        await ak.run_in_thread(lambda: update_template(self.data, self.update_progress), daemon=True)
+        result = await ak.run_in_thread(
+            lambda: update_template(self.data, self.progress.update_progress, self.progress.s3_update_progress
+        ), daemon=True)
         await ak.sleep(.5)
-        self.root.ids.container.remove_widget(self.root.entries[self.data['id']])
-
-    def update_progress(self, tran: str, total: str) -> None:
-        if self.progress.value != 100:
-            self.progress.value += 5
-
-
-"""
-Authenticator
-"""
-
-
-class Authenticator(Popup):
-
-    def authenticate(self):
-        if authenticate_user():
-            self.ids.response.text = "[b]Authentication: SUCCESS![/b]"
-            return True
+        if result:
+            self.root.ids.container.remove_widget(self.root.entries[self.data['id']])
         else:
-            self.ids.response.text = "[b]Authentication: FAILED![/b]"
-            return False
+            download.clear_widgets()
+            download.add_widget(Label(text="[color=#a84747]FAILED[/color]", markup=True))
+
+    def update_progress(self, tran: int, total: int) -> None:
+        progress = int((tran/total)*100)
+        self.progress.value = progress
+
+
+class UpdateProgress(ProgressBar):
+    def __init__(self, size, **kwargs):
+        super().__init__(**kwargs)
+        self.download_size = int(size)
+        self.current = 0
+
+    def update_progress(self, tran: int, total: int) -> None:
+        self.value = int((tran / total) * 100)
+
+    def s3_update_progress(self, tran: int) -> None:
+        self.current += tran
+        self.value = int((self.current / self.download_size) * 100)
 
 
 """
