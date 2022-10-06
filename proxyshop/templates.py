@@ -569,7 +569,7 @@ class NormalFullartTemplate (NormalTemplate):
     """
     Normal full art template (Also called "Universes Beyond")
     """
-    template_file_name = "normal-fullart.psd"
+    template_file_name = "normal-fullart-davidianstyle.psd"
     template_suffix = "Fullart"
 
 
