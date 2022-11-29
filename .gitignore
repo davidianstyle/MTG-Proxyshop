@@ -157,10 +157,8 @@ cython_debug/
 .vscode/
 
 # Specific to this project
-/art
-/art-uploaded
-/out
-/out-uploaded
+/art*
+/out*
 /tmp
 /templates
 test.py
