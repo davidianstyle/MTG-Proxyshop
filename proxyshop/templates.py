@@ -11,7 +11,7 @@ from photoshop.api._artlayer import ArtLayer
 from photoshop.api._layerSet import LayerSet
 
 from proxyshop.frame_logic import format_expansion_symbol_info
-import proxyshop.text_layers as txt_layers
+import proxyshop.text_layers as text_classes
 import proxyshop.format_text as ft
 from proxyshop.constants import con
 from proxyshop.settings import cfg
@@ -749,16 +749,16 @@ class StarterTemplate (BaseTemplate):
 
         # Add text layers
         self.text.extend([
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = self.text_layer_mana,
                 contents = self.layout.mana_cost
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer = self.text_layer_name,
                 contents = self.layout.name,
                 reference = self.text_layer_mana
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer = self.text_layer_type,
                 contents = self.layout.type_line,
                 reference = self.expansion_symbol
@@ -792,11 +792,11 @@ class NormalTemplate (StarterTemplate):
         if self.is_creature:
             # Creature Rules Text + PT
             self.text.extend([
-                txt_layers.TextField(
+                text_classes.TextField(
                     layer = self.text_layer_pt,
                     contents = f"{self.layout.power}/{self.layout.toughness}"
                 ),
-                txt_layers.CreatureFormattedTextArea(
+                text_classes.CreatureFormattedTextArea(
                     layer = self.text_layer_rules,
                     contents = self.layout.oracle_text,
                     flavor = self.layout.flavor_text,
@@ -811,7 +811,7 @@ class NormalTemplate (StarterTemplate):
         else:
             # Noncreature Rules Text
             self.text.append(
-                txt_layers.FormattedTextArea(
+                text_classes.FormattedTextArea(
                     layer = self.text_layer_rules,
                     contents = self.layout.oracle_text,
                     flavor = self.layout.flavor_text,
@@ -904,7 +904,7 @@ class NormalClassicTemplate (StarterTemplate):
 
         # Add rules text
         self.text.append(
-            txt_layers.FormattedTextArea(
+            text_classes.FormattedTextArea(
                 layer = self.text_layer_rules,
                 contents = self.layout.oracle_text,
                 flavor = self.layout.flavor_text,
@@ -917,7 +917,7 @@ class NormalClassicTemplate (StarterTemplate):
         # Add Power / Toughness
         if self.is_creature:
             self.text.append(
-                txt_layers.TextField(
+                text_classes.TextField(
                     layer = self.text_layer_pt,
                     contents = f"{self.layout.power}/{self.layout.toughness}"
                 )
@@ -1201,7 +1201,7 @@ class TransformFrontTemplate (TransformBackTemplate):
         # If flipside is creature, set flipside power/toughness
         if self.other_face_is_creature:
             self.text.append(
-                txt_layers.TextField(
+                text_classes.TextField(
                     layer=psd.getLayer(con.layers['FLIPSIDE_POWER_TOUGHNESS'], con.layers['TEXT_AND_ICONS']),
                     contents=str(self.layout.other_face_power) + "/" + str(self.layout.other_face_toughness)
                 )
@@ -1231,11 +1231,11 @@ class IxalanTemplate (NormalTemplate):
 
         # Add to text layers
         self.text.extend([
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = self.text_layer_name,
                 contents = self.layout.name
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = self.text_layer_type,
                 contents = self.layout.type_line
             )
@@ -1272,11 +1272,11 @@ class MDFCBackTemplate (NormalTemplate):
 
         # Add mdfc text layers
         self.text.extend([
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = self.text_layer_mdfc_right,
                 contents = self.layout.other_face_right
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer = self.text_layer_mdfc_left,
                 contents = self.layout.other_face_left,
                 reference = self.text_layer_mdfc_right,
@@ -1330,7 +1330,7 @@ class MutateTemplate (NormalTemplate):
 
         # Add mutate text
         self.text.append(
-            txt_layers.FormattedTextArea(
+            text_classes.FormattedTextArea(
                 layer = self.text_layer_mutate,
                 contents = self.layout.mutate_text,
                 flavor = self.layout.flavor_text,
@@ -1355,23 +1355,23 @@ class AdventureTemplate (NormalTemplate):
         # Add adventure text layers
         mana_cost = psd.getLayer(con.layers['MANA_COST_ADVENTURE'], self.text_layers)
         self.text.extend([
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = mana_cost,
                 contents = self.layout.adventure['mana_cost']
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer = psd.getLayer(con.layers['NAME_ADVENTURE'], self.text_layers),
                 contents = self.layout.adventure['name'],
                 reference = mana_cost,
             ),
-            txt_layers.FormattedTextArea(
+            text_classes.FormattedTextArea(
                 layer = psd.getLayer(con.layers['RULES_TEXT_ADVENTURE'], self.text_layers),
                 contents = self.layout.adventure['oracle_text'],
                 flavor = "",
                 centered = False,
                 reference = psd.getLayer(con.layers['TEXTBOX_REFERENCE_ADVENTURE'], self.text_layers),
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer(con.layers['TYPE_LINE_ADVENTURE'], self.text_layers),
                 contents = self.layout.adventure['type_line']
             )
@@ -1394,35 +1394,35 @@ class LevelerTemplate (NormalTemplate):
         # Overwrite to add level abilities
         leveler_text_group = psd.getLayerSet("Leveler Text", self.text_layers)
         self.text.extend([
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = psd.getLayer("Rules Text - Level Up", leveler_text_group),
                 contents = self.layout.level_up_text
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer("Top Power / Toughness", leveler_text_group),
                 contents = str(self.layout.power) + "/" + str(self.layout.toughness)
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer("Middle Level", leveler_text_group),
                 contents = self.layout.middle_level
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer("Middle Power / Toughness", leveler_text_group),
                 contents = self.layout.middle_power_toughness
             ),
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = psd.getLayer("Rules Text - Levels X-Y", leveler_text_group),
                 contents = self.layout.levels_x_y_text
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer("Bottom Level", leveler_text_group),
                 contents = self.layout.bottom_level
             ),
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = psd.getLayer("Bottom Power / Toughness", leveler_text_group),
                 contents = self.layout.bottom_power_toughness
             ),
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer = psd.getLayer("Rules Text - Levels Z+", leveler_text_group),
                 contents = self.layout.levels_z_plus_text
             )
@@ -1490,7 +1490,7 @@ class SagaTemplate (NormalTemplate):
             stage_group = psd.getLayerSet(stages[i], saga_text_group)
             stage_group.visible = True
             self.text.append(
-                txt_layers.FormattedTextField(
+                text_classes.FormattedTextField(
                     layer = psd.getLayer("Text", stage_group),
                     contents = line
                 )
@@ -1654,7 +1654,7 @@ class PlaneswalkerTemplate (StarterTemplate):
 
             # Add ability text
             self.text.append(
-                txt_layers.FormattedTextField(
+                text_classes.FormattedTextField(
                     layer=ability_layer,
                     contents=ability
                 )
@@ -1880,11 +1880,11 @@ class PlaneswalkerMDFCBackTemplate (PlaneswalkerTemplate):
 
         # Add mdfc text layers
         self.text.extend([
-            txt_layers.FormattedTextField(
+            text_classes.FormattedTextField(
                 layer=self.text_layer_mdfc_right,
                 contents=self.layout.other_face_right
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer=self.text_layer_mdfc_left,
                 contents=self.layout.other_face_left,
                 reference=self.text_layer_mdfc_right,
@@ -2039,11 +2039,11 @@ class PlanarTemplate (StarterTemplate):
 
         # Add text layers
         self.text.extend([
-            txt_layers.TextField(
+            text_classes.TextField(
                 layer = self.text_layer_name,
                 contents = self.layout.name
             ),
-            txt_layers.ScaledTextField(
+            text_classes.ScaledTextField(
                 layer = self.text_layer_type,
                 contents = self.layout.type_line,
                 reference = self.expansion_symbol
@@ -2057,7 +2057,7 @@ class PlanarTemplate (StarterTemplate):
 
             # Insert oracle text into static ability layer and disable chaos ability & layer mask on textbox
             self.text.append(
-                txt_layers.FormattedTextField(
+                text_classes.FormattedTextField(
                     layer = self.text_layer_static_ability,
                     contents = self.layout.oracle_text
                 )
@@ -2071,11 +2071,11 @@ class PlanarTemplate (StarterTemplate):
             # Split oracle text on last line break, insert everything before into static, the rest into chaos
             linebreak_index = self.layout.oracle_text.rindex("\n")
             self.text.extend([
-                txt_layers.FormattedTextField(
+                text_classes.FormattedTextField(
                     layer = self.text_layer_static_ability,
                     contents = self.layout.oracle_text[0:linebreak_index]
                 ),
-                txt_layers.FormattedTextField(
+                text_classes.FormattedTextField(
                     layer = self.text_layer_chaos_ability,
                     contents = self.layout.oracle_text[linebreak_index+1:]
                 ),
