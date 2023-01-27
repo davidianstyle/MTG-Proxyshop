@@ -155,9 +155,9 @@ cython_debug/
 
 # SPECIFIC TO THIS PROJECT
 # Art input folder
-/art
+/art*
 # Render output folder
-/out
+/out*
 # Temporary logging directory
 /tmp
 # PSD templates directory

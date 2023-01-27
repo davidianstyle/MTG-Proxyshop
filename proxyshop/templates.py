@@ -390,7 +390,8 @@ class BaseTemplate:
                 psd.replace_text(set_layer, "EN", self.layout.lang.upper())
 
             # Fill set info / artist info
-            set_layer.textItem.contents = self.layout.set + set_layer.textItem.contents
+            if cfg.auto_symbol:
+                psd.replace_text(set_layer, "MTG", self.layout.set)
             psd.replace_text(artist_layer, "Artist", self.layout.artist)
 
         # Generate the expansion symbol
@@ -1079,7 +1080,7 @@ class NormalExtendedTemplate (NormalTemplate):
      An extended-art version of the normal template. The layer structure of this template and
      NormalTemplate are identical.
     """
-    template_file_name = "normal-extended"
+    template_file_name = "normal-extended-davidianstyle"
     template_suffix = "Extended"
 
 
@@ -1087,7 +1088,7 @@ class NormalFullartTemplate (NormalTemplate):
     """
     Normal full art template (Also called "Universes Beyond")
     """
-    template_file_name = "normal-fullart"
+    template_file_name = "normal-fullart-davidianstyle"
     template_suffix = "Fullart"
 
 
@@ -1096,7 +1097,7 @@ class WomensDayTemplate (NormalTemplate):
     The showcase template first used on the Women's Day Secret Lair. Doesn't have any background layers, needs a
     layer mask on the pinlines group when card is legendary, and doesn't support companions.
     """
-    template_file_name = "womensday"
+    template_file_name = "womensday-davidianstyle"
     template_suffix = "Showcase"
 
     @cached_property
@@ -1185,8 +1186,8 @@ class ExpeditionTemplate (NormalTemplate):
     Zendikar Rising Expedition template. Masks pinlines for legendary cards, has a single static background layer,
     doesn't support color indicator, companion, or nyx layers.
     """
-    template_file_name = "znrexp.psd"
-    template_suffix = "Expedition"
+    def template_file_name (self):
+        return "znrexp-davidianstyle"
 
     @cached_property
     def text_layer_rules(self) -> Optional[ArtLayer]:
@@ -2514,7 +2515,7 @@ class BasicLandUnstableTemplate (BasicLandTemplate):
     Basic land template for the borderless basics from Unstable.
     Doesn't have expansion symbol.
     """
-    template_file_name = "basic-unstable"
+    template_file_name = "basic-unstable-davidianstyle"
     template_suffix = "Unstable"
 
     def create_expansion_symbol(self, centered=False):
