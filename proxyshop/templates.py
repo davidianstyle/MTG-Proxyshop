@@ -1083,6 +1083,10 @@ class NormalExtendedTemplate (NormalTemplate):
     template_file_name = "normal-extended-davidianstyle"
     template_suffix = "Extended"
 
+    def __init__(self, layout):
+        # Strip out reminder text for extended (davidianstyle edit: respect config)
+        # cfg.remove_reminder = True
+        super().__init__(layout)
 
 class NormalFullartTemplate (NormalTemplate):
     """
@@ -1099,6 +1103,11 @@ class WomensDayTemplate (NormalTemplate):
     """
     template_file_name = "womensday-davidianstyle"
     template_suffix = "Showcase"
+
+    def __init__(self, layout):
+        # Strip out reminder text for fullart (davidianstyle edit: respect config)
+        # cfg.remove_reminder = True
+        super().__init__(layout)
 
     @cached_property
     def art_reference_layer(self) -> ArtLayer:
@@ -1188,6 +1197,11 @@ class ExpeditionTemplate (NormalTemplate):
     """
     def template_file_name (self):
         return "znrexp-davidianstyle"
+
+    def __init__(self, layout):
+        # Strip out reminder text (davidianstyle edit: respect config)
+        # cfg.remove_reminder = True
+        super().__init__(layout)
 
     @cached_property
     def text_layer_rules(self) -> Optional[ArtLayer]:
