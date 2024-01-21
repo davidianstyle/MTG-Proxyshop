@@ -646,11 +646,12 @@ class BaseTemplate:
         Overwrite this function if your template has specific demands.
         """
         # Establish the name
-        suffix = self.template_suffix
+        name = f"{self.layout.name_raw}"
         if cfg.save_artist_name:
-            suffix = f"{suffix} {self.layout.artist}" if suffix else self.layout.artist
-        name = f"{self.layout.name_raw} ({suffix})" if suffix else self.layout.name_raw
-
+            name = name + " " + f"({self.layout.artist})"
+        if self.template_suffix:
+            name = name + " " + f"[{self.template_suffix}]"
+        
         # Check if name already exists
         if not cfg.overwrite_duplicate:
             num = 0
